@@ -78,6 +78,11 @@ def preprocessor():
 @pytest.fixture
 def train_model(sample_data, preprocessor):
     """モデルの学習とテストデータの準備"""
+    # ベースライン保存：既存の titanic_model.pkl を baseline にコピー
+    if os.path.exists(MODEL_PATH):
+        os.makedirs(MODEL_DIR, exist_ok=True)
+        shutil.copy(MODEL_PATH, BASELINE_PATH)
+
     # データの分割とラベル変換
     X = sample_data.drop("Survived", axis=1)
     y = sample_data["Survived"].astype(int)
@@ -100,10 +105,6 @@ def train_model(sample_data, preprocessor):
     os.makedirs(MODEL_DIR, exist_ok=True)
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model, f)
-
-    # ベースラインが存在しない場合はコピー
-    if not os.path.exists(BASELINE_PATH):
-        shutil.copy(MODEL_PATH, BASELINE_PATH)
 
     return model, X_test, y_test
 

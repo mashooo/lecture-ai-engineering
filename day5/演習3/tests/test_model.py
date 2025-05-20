@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import time
+import shutil
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -16,6 +17,7 @@ from sklearn.pipeline import Pipeline
 DATA_PATH = os.path.join(os.path.dirname(__file__), "../data/Titanic.csv")
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "../models")
 MODEL_PATH = os.path.join(MODEL_DIR, "titanic_model.pkl")
+BASELINE_PATH = os.path.join(MODEL_DIR, "titanic_baseline_model.pkl")
 
 
 @pytest.fixture
@@ -99,6 +101,10 @@ def train_model(sample_data, preprocessor):
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model, f)
 
+    # ベースラインが存在しない場合はコピー
+    if not os.path.exists(BASELINE_PATH):
+        shutil.copy(MODEL_PATH, BASELINE_PATH)
+
     return model, X_test, y_test
 
 
@@ -171,3 +177,17 @@ def test_model_reproducibility(sample_data, preprocessor):
     assert np.array_equal(
         predictions1, predictions2
     ), "モデルの予測結果に再現性がありません"
+
+
+def test_model_accuracy_vs_baseline(train_model):
+    """最新モデルとベースラインモデルの精度を比較"""
+    model_new, X_test, y_test = train_model
+
+    with open(BASELINE_PATH, "rb") as f:
+        model_baseline = pickle.load(f)
+
+    acc_new = accuracy_score(y_test, model_new.predict(X_test))
+    acc_base = accuracy_score(y_test, model_baseline.predict(X_test))
+
+    print(f"New: {acc_new}, Baseline: {acc_base}")
+    assert acc_new >= acc_base, f"精度が劣化しました: 新 {acc_new} < 旧 {acc_base}"
